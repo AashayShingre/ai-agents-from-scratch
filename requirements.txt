@@ -1,2 +1,6 @@
 google-generativeai
 dotenv
+mcp[cli]
+pillow
+requests
+pyautogui
