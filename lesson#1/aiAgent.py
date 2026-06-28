@@ -2,7 +2,7 @@
 Example 1: A tool-using AI agent backed by Gemini.
 
 Run:
-    python aiAgent_1.py
+    python "lesson#1/aiAgent.py"
 
 Try different prompts by uncommenting or adding calls at the bottom of this file:
     run_agent("What is the weather in Tokyo?")
@@ -10,10 +10,11 @@ Try different prompts by uncommenting or adding calls at the bottom of this file
     run_agent("Is Mumbai hotter or Bangalore?")
 """
 
-import google.generativeai as genai 
-import os 
-import requests 
+import google.generativeai as genai
+import os
+import requests
 import json
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -26,10 +27,11 @@ TOOLS = {} # global tools registry
 
 model = genai.GenerativeModel('gemini-3.1-flash-lite')
 
+PROMPT_PATH = Path(__file__).parent / "prompts" / "system_prompt.txt"
+
 system_prompt = ""
 try:
-    with open('prompts/system_prompt-1.txt', 'r') as file:
-        system_prompt = file.read()
+    system_prompt = PROMPT_PATH.read_text()
 except FileNotFoundError:
     system_prompt = """
     You are a helpful assistant that can calculate and get weather information.

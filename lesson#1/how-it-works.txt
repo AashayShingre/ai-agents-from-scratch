@@ -1,0 +1,53 @@
+Lesson 1: Tool-using agent
+============================
+
+This lesson builds the simplest kind of AI agent — an LLM that can call
+Python functions to get real data or do calculations.
+
+
+The pieces
+----------
+
+1. Tools
+   Regular Python functions decorated with @tool. They get registered in a
+   TOOLS dict so the agent can look them up by name.
+
+   - calculate(expr)  → evaluates a math expression
+   - get_weather(city) → fetches live weather from Open-Meteo
+
+2. System prompt (prompts/system_prompt.txt)
+   Tells the model what tools exist and how to respond. The model must
+   reply with JSON only — either a tool call or a final answer.
+
+3. Agent loop (run_agent)
+   The core pattern every agent shares:
+
+   User prompt
+       ↓
+   Send prompt + system instructions to Gemini
+       ↓
+   Parse the JSON response
+       ↓
+   Tool call?  → run the tool → send result back to the model → repeat
+   Final answer? → return it to the user
+
+   The loop runs up to 5 steps. If the model never produces an answer,
+   it stops with an error.
+
+
+Example flow
+------------
+
+Prompt: "Is Mumbai hotter or Bangalore?"
+
+Step 1 — model calls get_weather for Mumbai
+Step 2 — model calls get_weather for Bangalore
+Step 3 — model compares the temperatures and returns the final answer
+
+
+Why JSON?
+---------
+
+The model outputs structured JSON so we can reliably tell whether it wants
+to use a tool or is done. Without this, we'd have to guess from free-form
+text, which breaks easily.
