@@ -10,11 +10,10 @@ Each lesson is self-contained in its own folder with its script and prompts.
 
 More examples will be added here soon as the series grows - MCP, memory, multi-agent workflows, planning, and more. Each new script will follow the same pattern: a focused example with a matching prompt file under `prompts/`.
 
-Example, with the first example (the only one currently), I have to manually write the integration for each function and specify each of them clearly in the system prompt. So, in the next iteration, I want to have the agent call tools via MCP.
 
 ## Setup
 
-**Requirements:** Python 3.9+
+**Requirements:** Python 3.13+
 
 1. Clone the repo and create a virtual environment:
   ```bash

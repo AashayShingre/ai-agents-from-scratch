@@ -1,0 +1,99 @@
+Architecture
+
+                    ┌──────────────────────────────┐
+                    │      HOST APPLICATION        │
+                    │   (Claude Desktop / Cursor)  │
+                    |              +               |
+                    │          MCP CLIENT          │  ◄─── (Central Orchestrator)
+                    └──────┬────────────────┬──────┘
+                           │                │
+            ┌──────────────┘                └──────────────┐
+            ▼ (stdio pipe)                                 ▼ (stdio pipe)
+┌───────────────────────┐                      ┌───────────────────────┐
+│   CALCULATOR SERVER   │                      │  GEO-WEATHER SERVER   │
+├───────────────────────┤                      ├───────────────────────┤
+│  • calculate          │                      │  • get_coordinates    │
+│                       │                      │  • get_weather_by_... │
+└───────────────────────┘                      └───────────────────────┘
+
+
+Lesson 2: Multi-Server MCP Agent
+=================================
+
+This lesson upgrades our tool-using agent into an enterprise-ready client 
+using the Model Context Protocol (MCP). Instead of executing local Python 
+functions, the agent communicates with external, independent server processes 
+over a standardized protocol pipeline.
+
+
+What changed since Lesson 1?
+----------------------------
+
+In Lesson 1, tools were local functions (`TOOLS[tool_name]`). This meant all 
+tools had to live inside the exact same codebase and environment. 
+
+In Lesson 2, tools are hosted on separate, isolated sub-process servers 
+(`calculator-mcp-server.py` and `weather-mcp-server.py`). The agent knows 
+nothing about how the tools are coded; it simply communicates with them 
+using a unified architectural standard (MCP).
+
+
+The New Pieces
+--------------
+
+1. Model Context Protocol (MCP)
+   A standard open protocol layer that lets AI models safely connect to data 
+   sources and tools. The agent acts as an "MCP Client" that establishes 
+   handshakes with external "MCP Servers" over standard input/output (stdio) channels.
+
+2. Persistent Tool Mapping (`TOOL_TO_SESSION_MAP`)
+   Instead of mapping names directly to executable code blocks, our dictionary 
+   maps a tool name to an active, persistent network communication `ClientSession`. 
+   When Gemini wants to call `get_weather`, the client looks up which server 
+   owns that tool and routes the call to that specific open session using 
+   `session.call_tool()`.
+
+3. `AsyncExitStack` (The Connection Lifecycle Guard)
+   Normally, an `async with` context block terminates and destroys its underlying 
+   connections the second its indentation block ends. If we used standard `async with` 
+   loops inside our setup function, the servers would be killed before the agent 
+   could ever run a query.
+
+   `AsyncExitStack` solves this lifecycle issue. It acts as a dynamic background 
+   container that opens all server processes simultaneously, registers their open 
+   sessions, and strictly keeps them alive and available across multiple sequential 
+   agent loops. Everything is cleaned up perfectly only when the main program exits.
+
+
+The Evolution of the Flow
+-------------------------
+
+User Prompt: "Is Mumbai hotter or Bengaluru?"
+  
+  [ Phase 1: Application Bootup ]
+  AsyncExitStack opens → Spins up Calculator Server (discovers 'calculate')
+                       → Spins up Weather Server (discovers 'get_weather')
+                       → All server communication channels held open in memory.
+
+  [ Phase 2: Core Agent Execution Loop ]
+  User prompt + Discovered Tool Descriptions combined 
+                       ↓
+  Sent to Gemini Chat Thread (Enforcing structured JSON output)
+                       ↓
+  Model requests tool call: {"tool_name": "get_weather", "tool_arguments": {"city": "Mumbai"}}
+                       ↓
+  Agent checks registry: 'get_weather' belongs to the Weather Server Session
+                       ↓
+  Client dispatches message down the open stream → Server responds → Back to Gemini
+                       ↓
+  Repeat until model returns {"answer": "..."}
+
+
+Why abstract tools into MCP?
+----------------------------
+* Isolation: A crashing tool or dependency conflict inside a complex calculator 
+  cannot crash your core orchestrator agent loop.
+* Language Agnostic: The agent script is written in Python, but the individual 
+  MCP servers could be rewritten entirely in Node.js, Go, or Rust without changing 
+  a single line of the main agent reasoning code.
+

@@ -38,10 +38,10 @@ The pieces
 Example flow
 ------------
 
-Prompt: "Is Mumbai hotter or Bangalore?"
+Prompt: "Is Mumbai hotter or Bengaluru?"
 
 Step 1 — model calls get_weather for Mumbai
-Step 2 — model calls get_weather for Bangalore
+Step 2 — model calls get_weather for Bengaluru
 Step 3 — model compares the temperatures and returns the final answer
 
 

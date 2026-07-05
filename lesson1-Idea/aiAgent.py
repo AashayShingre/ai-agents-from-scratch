@@ -2,22 +2,29 @@
 Example 1: A tool-using AI agent backed by Gemini.
 
 Run:
-    python "lesson#1/aiAgent.py"
+    python "aiAgent.py"
 
 Try different prompts by uncommenting or adding calls at the bottom of this file:
     run_agent("What is the weather in Tokyo?")
     run_agent("What is the sum of temperatures in Mumbai and Delhi?")
-    run_agent("Is Mumbai hotter or Bangalore?")
+    run_agent("Is Mumbai hotter or Bengaluru?")
 """
 
-import google.generativeai as genai
+import google.generativeai as genai  # pyright: ignore[reportMissingImports]
 import os
 import requests
 import json
 from pathlib import Path
 from dotenv import load_dotenv
 
+from learnings.mcp.AgenticMCPUse import MAX_ITERATIONS
+
 load_dotenv()
+
+
+MAX_ITERATIONS = 5
+
+
 API_KEY = os.getenv("GOOGLE_API_KEY") # load API key from environment variables
 if not API_KEY:
     raise ValueError("GOOGLE_API_KEY not set. Add it to .env or your environment.")
@@ -28,14 +35,7 @@ TOOLS = {} # global tools registry
 model = genai.GenerativeModel('gemini-3.1-flash-lite')
 
 PROMPT_PATH = Path(__file__).parent / "prompts" / "system_prompt.txt"
-
-system_prompt = ""
-try:
-    system_prompt = PROMPT_PATH.read_text()
-except FileNotFoundError:
-    system_prompt = """
-    You are a helpful assistant that can calculate and get weather information.
-    """
+system_prompt = PROMPT_PATH.read_text()
 
 
 def tool(func): 
@@ -44,7 +44,7 @@ def tool(func):
 
 @tool
 def calculate(expr): 
-    """adds two numbers"""
+    """evaluates an expression"""
     return eval(expr)
 
 @tool
@@ -93,18 +93,18 @@ def response_parser(response: str) -> dict:
         return {f"error": {e}}
 
 
-def run_agent(prompt: str, max_steps: int = 5) -> str: 
+def run_agent(prompt: str, max_steps: int = MAX_ITERATIONS) -> str: 
     steps = 0
     
     # put the user prompt and system prompt into a single string 
     full_prompt = f"{system_prompt}\n\nUser Prompt: {prompt}"
+    
     # create a chat session 
-
     chat = model.start_chat(
         history=[]
     )
 
-    # send the user prompt to the chat session 
+    # send the initial prompt to the chat session 
     response_content = chat.send_message(full_prompt).text
 
     # initalize loop - 
@@ -140,7 +140,7 @@ if __name__ == "__main__":
 
     # print(run_agent("What is the weather in Tokyo?"))
     # print(run_agent("What is the sum of temperatures in Mumbai and Delhi?"))
-    # print(run_agent("Is Mumbai hotter or Bangalore?"))
+    # print(run_agent("Is Mumbai hotter or Bengaluru?"))
 
 
 
